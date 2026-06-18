@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital Engine for Nursing Deployment & Yield</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#ffffff;--bg-secondary:#f7f7f5;--bg-tertiary:#f0eeea;
+  --text-primary:#1a1a18;--text-secondary:#6b6b67;--text-tertiary:#a0a09a;
+  --border-light:rgba(0,0,0,0.1);--border-mid:rgba(0,0,0,0.15);
+  --teal:#1D9E75;--teal-light:#E1F5EE;--teal-dark:#085041;--teal-mid:#0F6E56;
+  --purple:#7F77DD;--purple-light:#EEEDFE;--purple-dark:#3C3489;--purple-mid:#534AB7;
+  --red:#E24B4A;--red-light:#FCEBEB;--red-dark:#791F1F;
+  --amber:#BA7517;--amber-light:#FAEEDA;--amber-dark:#633806;
+  --blue:#378ADD;--blue-light:#E6F1FB;--blue-dark:#0C447C;
+  --radius-sm:6px;--radius-md:8px;--radius-lg:12px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg-tertiary);color:var(--text-primary);font-size:14px;height:100vh;overflow:hidden}
+
+/* ── Layout ── */
+.app-wrapper{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.global-header{background:#042C53;border-bottom:0.5px solid #0C447C;padding:0 20px;height:44px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.gh-name{font-size:13px;font-weight:400;color:#B5D4F4;white-space:nowrap;letter-spacing:0.01em}
+.gh-name .li{font-size:16px;font-weight:700;color:#fff}
+.gh-right{font-size:11px;color:#85B7EB;display:flex;align-items:center;gap:16px}
+.app-shell{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;min-width:200px;background:var(--bg-secondary);border-right:0.5px solid var(--border-light);display:flex;flex-direction:column;overflow:hidden}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ── Sidebar ── */
+.sidebar-top{padding:12px 14px 10px;border-bottom:0.5px solid var(--border-light)}
+.logo{display:none}
+.sidebar-user{font-size:11px;color:var(--text-secondary)}
+.nav-section{font-size:10px;font-weight:600;color:var(--text-tertiary);padding:12px 16px 4px;letter-spacing:0.08em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text-secondary);position:relative;transition:all 0.1s;user-select:none}
+.nav-item:hover{background:var(--bg-primary);color:var(--text-primary)}
+.nav-item.active{background:var(--bg-primary);color:var(--text-primary);font-weight:500}
+.nav-item.active::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:3px;background:var(--teal);border-radius:0 3px 3px 0}
+.nav-item.active.danger::before{background:var(--red)}
+.nav-item i{font-size:16px;flex-shrink:0}
+.nav-pip{font-size:10px;padding:1px 6px;border-radius:20px;margin-left:auto;white-space:nowrap}
+.pip-green{background:var(--teal-light);color:var(--teal-dark)}
+.pip-red{background:var(--red-light);color:var(--red-dark)}
+.pip-purple{background:var(--purple-light);color:var(--purple-dark)}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:0.5px solid var(--border-light);font-size:11px;color:var(--text-tertiary)}
+
+/* ── Module wrapper ── */
+.module{display:none;flex:1;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
+.module.active{display:flex}
+.topbar{padding:14px 20px;border-bottom:0.5px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;background:var(--bg-primary);flex-shrink:0}
+.topbar-left .tb-title{font-size:15px;font-weight:600}
+.topbar-left .tb-sub{font-size:11px;color:var(--text-secondary);margin-top:2px}
+.topbar-right{display:flex;gap:8px;align-items:center}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);font-size:13px;cursor:pointer;background:transparent;color:var(--text-primary);font-family:var(--font);transition:background 0.1s;white-space:nowrap}
+.btn:hover{background:var(--bg-secondary)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn i{font-size:14px}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-primary:hover{background:var(--teal-mid)}
+.btn-ai{background:var(--purple-light);border-color:#AFA9EC;color:var(--purple-dark)}
+.btn-ai:hover{background:#CECBF6}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-danger:hover{background:#A32D2D}
+.btn-ghost{border-color:transparent}
+.btn-ghost:hover{border-color:var(--border-light)}
+
+/* ── Form elements ── */
+input,select,textarea{font-family:var(--font);font-size:13px;color:var(--text-primary);background:var(--bg-primary);border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:7px 10px;outline:none;transition:border-color 0.15s}
+input:focus,select:focus{border-color:var(--teal)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:11px;font-weight:500;color:var(--text-secondary)}
+.form-group input,.form-group select{width:100%}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge-pk1{background:#E1F5EE;color:#085041}
+.badge-pk2{background:#E6F1FB;color:#0C447C}
+.badge-pk3{background:#EEEDFE;color:#3C3489}
+.badge-pk4{background:#FAEEDA;color:#633806}
+.badge-icu{background:#FCEBEB;color:#791F1F}
+.badge-gw{background:#EAF3DE;color:#27500A}
+.badge-ed{background:#FAEEDA;color:#633806}
+.badge-or{background:#EEEDFE;color:#3C3489}
+.badge-hdu{background:#E6F1FB;color:#0C447C}
+.badge-mat{background:#FBEAF0;color:#72243E}
+.badge-active{background:#E1F5EE;color:#085041}
+.badge-leave{background:#FAEEDA;color:#633806}
+.badge-off{background:#F1EFE8;color:#5F5E5A}
+.badge-hard{background:#FCEBEB;color:#791F1F;border:0.5px solid #F7C1C1}
+.badge-soft{background:#E6F1FB;color:#0C447C;border:0.5px solid #B5D4F4}
+
+/* ── Cards ── */
+.card{background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);overflow:hidden}
+.card-header{padding:10px 14px;border-bottom:0.5px solid var(--border-light);font-size:12px;font-weight:600;background:var(--bg-secondary);display:flex;align-items:center;justify-content:space-between}
+.card-header .ch-title{color:var(--text-primary)}
+.card-header .ch-sub{font-size:11px;color:var(--text-secondary);font-weight:400;margin-top:1px}
+
+/* ── Status dot ── */
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;flex-shrink:0}
+.dot-active{background:var(--teal)}
+.dot-leave{background:var(--amber)}
+.dot-off{background:#888780}
+
+/* ── Avatar ── */
+.avatar{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:500;flex-shrink:0}
+.av-teal{background:#9FE1CB;color:#085041}
+.av-blue{background:#B5D4F4;color:#0C447C}
+.av-purple{background:#CECBF6;color:#3C3489}
+.av-amber{background:#FAC775;color:#633806}
+
+/* ── Scrollable areas ── */
+.scroll-area{flex:1;overflow-y:auto;min-height:0}
+
+/* ── Stats bar ── */
+.stats-strip{display:flex;gap:1px;background:var(--border-light);border-bottom:0.5px solid var(--border-light);flex-shrink:0}
+.stat-chip{flex:1;padding:10px 16px;background:var(--bg-primary);text-align:center}
+.stat-num{font-size:18px;font-weight:600}
+.stat-lbl{font-size:11px;color:var(--text-secondary);margin-top:1px}
+.num-teal{color:var(--teal)}
+.num-amber{color:var(--amber)}
+.num-red{color:var(--red)}
+
+/* ── Table ── */
+.data-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.data-table th{background:var(--bg-secondary);padding:8px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);border-bottom:0.5px solid var(--border-light);letter-spacing:0.04em;text-transform:uppercase;position:sticky;top:0;z-index:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.data-table td{padding:10px 14px;border-bottom:0.5px solid var(--border-light);font-size:13px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.data-table tr:hover td{background:var(--bg-secondary)}
+.nurse-cell{display:flex;align-items:center;gap:8px}
+.nurse-name{font-weight:500;font-size:13px}
+.nurse-id{font-size:11px;color:var(--text-secondary)}
+
+/* ── Side panel ── */
+.panel-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.15);z-index:20;display:flex;justify-content:flex-end}
+.panel{width:340px;background:var(--bg-primary);height:100%;overflow-y:auto;border-left:0.5px solid var(--border-light);display:flex;flex-direction:column}
+.panel-header{padding:14px 16px;border-bottom:0.5px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.panel-title{font-size:14px;font-weight:600}
+.panel-body{padding:16px;flex:1}
+.p-section{font-size:10px;font-weight:600;color:var(--text-tertiary);letter-spacing:0.08em;text-transform:uppercase;margin:14px 0 8px}
+.p-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--border-light);font-size:13px}
+.p-row:last-child{border-bottom:none}
+.p-label{color:var(--text-secondary)}
+.p-val{font-weight:500;text-align:right;max-width:180px}
+.pill-grid{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.pill{font-size:11px;padding:3px 8px;border-radius:20px;background:var(--bg-secondary);color:var(--text-secondary);border:0.5px solid var(--border-light)}
+
+/* ── Filters bar ── */
+.filters-bar{padding:10px 16px;border-bottom:0.5px solid var(--border-light);display:flex;gap:10px;align-items:center;flex-shrink:0;background:var(--bg-secondary)}
+.search-wrap{position:relative;flex:1;max-width:260px}
+.search-wrap i{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text-tertiary)}
+.search-wrap input{padding:7px 10px 7px 32px;border:0.5px solid var(--border-light);width:100%}
+
+/* ── Rule engine ── */
+.dept-tabs{display:flex;background:var(--bg-secondary);border-bottom:0.5px solid var(--border-light);overflow-x:auto;flex-shrink:0}
+.dept-tab{padding:9px 16px;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.1s}
+.dept-tab:hover{color:var(--text-primary);background:var(--bg-primary)}
+.dept-tab.active{color:var(--teal);border-bottom-color:var(--teal);background:var(--bg-primary);font-weight:500}
+.rules-grid{padding:16px;display:flex;flex-direction:column;gap:14px}
+.rule-card{background:var(--bg-primary);border:0.5px solid var(--border-light);border-radius:var(--radius-lg);overflow:hidden}
+.rule-section-hd{padding:10px 14px 8px;border-bottom:0.5px solid var(--border-light);display:flex;align-items:center;gap:8px}
+.rule-section-title{font-size:13px;font-weight:500}
+.rule-section-desc{font-size:11px;color:var(--text-secondary);margin-top:1px}
+.rule-row{display:grid;grid-template-columns:32px 1fr auto auto;align-items:center;gap:12px;padding:10px 14px;border-bottom:0.5px solid var(--border-light)}
+.rule-row:last-child{border-bottom:none}
+.rule-row:hover{background:var(--bg-secondary)}
+.rule-icon{font-size:16px;color:var(--text-tertiary);text-align:center}
+.rule-info .rn{font-size:13px;font-weight:500}
+.rule-info .rd{font-size:11px;color:var(--text-secondary)}
+.rule-control{display:flex;align-items:center;gap:6px}
+.rule-input{width:52px;padding:4px 8px;border:0.5px solid var(--border-mid);border-radius:var(--radius-md);font-size:13px;text-align:center}
+.rule-unit{font-size:11px;color:var(--text-secondary)}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;background:var(--border-mid);border-radius:20px;cursor:pointer;transition:background 0.2s}
+.toggle input:checked+.toggle-slider{background:var(--teal)}
+.toggle-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform 0.2s}
+.toggle input:checked+.toggle-slider::before{transform:translateX(16px)}
+.unsaved-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);display:inline-block;margin-left:4px;vertical-align:middle}
+.save-bar{padding:10px 20px;border-top:0.5px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg-secondary)}
+.save-hint{font-size:12px;color:var(--text-secondary)}
+
+/* ── Roster grid ── */
+.roster-controls{padding:10px 16px;border-bottom:0.5px solid var(--border-light);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--bg-secondary);flex-wrap:wrap}
+.ctrl-label{font-size:12px;color:var(--text-secondary)}
+.ctrl-chip{font-size:10px;padding:2px 7px;border-radius:20px}
+.grid-container{flex:1;overflow:auto;position:relative;min-height:0}
+.roster-table{border-collapse:collapse;table-layout:fixed;font-size:11px}
+.roster-table th{background:var(--bg-secondary);padding:6px 3px;text-align:center;border:0.5px solid var(--border-light);font-weight:500;font-size:10px;color:var(--text-secondary);position:sticky;top:0;z-index:2}
+.roster-table th.nurse-col-h{text-align:left;padding:6px 8px;width:115px;min-width:115px;position:sticky;left:0;z-index:3;background:var(--bg-secondary)}
+.roster-table th.wknd{background:#F1EFE8;color:#5F5E5A}
+.roster-table td{padding:2px;border:0.5px solid var(--border-light);text-align:center;min-width:26px;width:26px;vertical-align:middle}
+.roster-table td.nurse-col-td{text-align:left;padding:5px 8px;background:var(--bg-primary);position:sticky;left:0;z-index:1;min-width:115px;width:115px}
+.roster-table td.wknd-td{background:rgba(0,0,0,0.02)}
+.nn{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95px}
+.npk{font-size:10px;color:var(--text-secondary)}
+.sc{width:22px;height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;margin:auto;cursor:default}
+.sc-M{background:#E1F5EE;color:#085041}
+.sc-A{background:#E6F1FB;color:#0C447C}
+.sc-N{background:#EEEDFE;color:#3C3489}
+.sc-O{background:var(--bg-secondary);color:var(--text-tertiary)}
+.sc-L{background:#FAEEDA;color:#633806}
+.roster-status{padding:8px 16px;border-top:0.5px solid var(--border-light);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--bg-secondary);font-size:11px;color:var(--text-secondary)}
+.legend{display:flex;gap:10px;align-items:center}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-swatch{font-size:10px;padding:1px 5px;border-radius:3px}
+
+/* ── AI panel ── */
+.ai-side{width:240px;min-width:240px;border-left:0.5px solid var(--border-light);display:flex;flex-direction:column;background:var(--bg-primary)}
+.ai-side-hd{padding:10px 12px;border-bottom:0.5px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ai-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);flex-shrink:0}
+.ai-hd-title{font-size:12px;font-weight:500}
+.ai-body{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.ai-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--text-tertiary);text-align:center;padding:16px}
+.ai-empty-state i{font-size:28px;opacity:0.25}
+.ai-empty-state p{font-size:12px;line-height:1.5}
+.ai-sec-title{font-size:10px;font-weight:600;color:var(--text-tertiary);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+.ai-note{border:0.5px solid var(--border-light);border-radius:var(--radius-md);padding:8px 10px}
+.ai-note.ok{border-color:#9FE1CB;background:#E1F5EE}
+.ai-note.warn{border-color:#FAC775;background:#FAEEDA}
+.ai-note.info{border-color:#B5D4F4;background:#E6F1FB}
+.ai-note .ant{font-size:11px;font-weight:500;margin-bottom:2px}
+.ai-note.ok .ant{color:#085041}
+.ai-note.warn .ant{color:#633806}
+.ai-note.info .ant{color:#0C447C}
+.ai-note .anb{font-size:11px;line-height:1.5}
+.ai-note.ok .anb{color:#0F6E56}
+.ai-note.warn .anb{color:#854F0B}
+.ai-note.info .anb{color:#185FA5}
+.reason-row{display:flex;align-items:flex-start;gap:5px;font-size:11px;line-height:1.4;color:var(--text-secondary);padding:3px 0;border-bottom:0.5px solid var(--border-light)}
+.reason-row:last-child{border-bottom:none}
+.reason-row i{font-size:12px;flex-shrink:0;margin-top:1px}
+.r-ok{color:var(--teal)}
+.r-warn{color:var(--amber)}
+.r-info{color:var(--blue)}
+
+/* ── Disruption ── */
+.alert-banner{background:var(--red-light);border-bottom:0.5px solid #F7C1C1;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.alert-text{flex:1;font-size:12px;color:var(--red-dark);line-height:1.4}
+.alert-text strong{color:#501313}
+.disruption-body{flex:1;display:flex;overflow:hidden;min-height:0}
+.d-left{width:290px;min-width:290px;border-right:0.5px solid var(--border-light);display:flex;flex-direction:column}
+.d-right{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.col-hd{padding:9px 14px;border-bottom:0.5px solid var(--border-light);font-size:12px;font-weight:500;background:var(--bg-secondary);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+.absent-form{border:1.5px solid #F09595;border-radius:var(--radius-lg);padding:12px;background:var(--red-light);margin-bottom:12px}
+.af-name{font-size:14px;font-weight:600;color:#501313;margin-bottom:1px}
+.af-meta{font-size:11px;color:var(--red-dark);margin-bottom:10px}
+.af-field{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.af-label{font-size:11px;font-weight:500;color:var(--red-dark)}
+.af-field select,.af-field input{border-color:#F09595;background:#fff;color:#501313;width:100%}
+.impact-card{border:0.5px solid var(--border-light);border-radius:var(--radius-md);overflow:hidden;margin-bottom:12px}
+.impact-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:0.5px solid var(--border-light);font-size:12px}
+.impact-row:last-child{border-bottom:none}
+.candidate-card{border:0.5px solid var(--border-light);border-radius:var(--radius-lg);padding:12px;margin-bottom:10px;background:var(--bg-primary)}
+.candidate-card.top{border-color:#9FE1CB;background:#E1F5EE}
+.cand-top{display:flex;align-items:flex-start;gap:9px;margin-bottom:8px}
+.cand-info{flex:1;min-width:0}
+.cand-name{font-size:13px;font-weight:500}
+.candidate-card.top .cand-name{color:#085041}
+.cand-meta{font-size:11px;color:var(--text-secondary)}
+.candidate-card.top .cand-meta{color:#0F6E56}
+.cand-rank{font-size:11px;font-weight:500;color:var(--text-tertiary)}
+.candidate-card.top .cand-rank{color:var(--teal)}
+.score-bar{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.score-track{flex:1;height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px;background:var(--teal)}
+.score-fill.mid{background:var(--amber)}
+.score-val{font-size:11px;font-weight:500;color:var(--text-secondary);min-width:28px;text-align:right}
+.ot-badge{font-size:10px;padding:1px 7px;border-radius:20px;background:var(--amber-light);color:var(--amber-dark);border:0.5px solid #FAC775}
+.elim-card{border:0.5px solid var(--border-light);border-radius:var(--radius-md);padding:7px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;opacity:0.65}
+.resolved-banner{background:var(--teal-light);border:0.5px solid #9FE1CB;border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--teal-dark);margin-bottom:10px}
+
+/* ── Spinner / loading ── */
+.spinner{width:22px;height:22px;border:2px solid var(--border-light);border-top-color:var(--purple);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-dots span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--purple);animation:blink 1.2s infinite}
+.gen-dots span:nth-child(2){animation-delay:0.2s}
+.gen-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes blink{0%,80%,100%{opacity:0.2}40%{opacity:1}}
+.loading-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--purple-mid);padding:8px 0}
+
+/* ── Empty / coming ── */
+.empty-module{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--text-tertiary);text-align:center;padding:32px}
+.empty-module i{font-size:40px;opacity:0.2}
+.empty-module .em-title{font-size:14px;font-weight:500;color:var(--text-secondary)}
+.empty-module .em-sub{font-size:12px;line-height:1.6;max-width:280px}
+
+/* ── Misc ── */
+.cert-warn{background:var(--red-light);color:var(--red-dark);font-size:10px;padding:2px 7px;border-radius:20px;border:0.5px solid #F7C1C1}
+.cert-ok{background:var(--teal-light);color:var(--teal-dark);font-size:10px;padding:2px 7px;border-radius:20px;border:0.5px solid #9FE1CB}
+.comp-tag{font-size:10px;padding:1px 6px;border-radius:3px;background:var(--bg-secondary);color:var(--text-secondary);border:0.5px solid var(--border-light)}
+.section-lbl{font-size:10px;font-weight:600;color:var(--text-tertiary);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:7px}
+.info-note{background:var(--blue-light);border:0.5px solid #B5D4F4;border-radius:var(--radius-md);padding:9px 12px;font-size:12px;color:var(--blue-dark);display:flex;align-items:flex-start;gap:6px;line-height:1.5}
+.warn-note{background:var(--amber-light);border:0.5px solid #FAC775;border-radius:var(--radius-md);padding:9px 12px;font-size:12px;color:var(--amber-dark);display:flex;align-items:flex-start;gap:6px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ─── GLOBAL HEADER ─── -->
+  <div class="global-header">
+    <div class="gh-name"><span class="li">H</span>ospital <span class="li">E</span>ngine for <span class="li">N</span>ursing <span class="li">D</span>eployment &amp; <span class="li">Y</span>ield</div>
+    <div class="gh-right"><span>MHG Nursing</span><span>Admin</span><span>Staging v0.1</span></div>
+  </div>
+
+<div class="app-shell">
+
+  <!-- ─── SIDEBAR ─── -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-user">Admin · All units</div>
+    </div>
+    <div class="nav-section">Core</div>
+    <div class="nav-item active" id="nav-registry" onclick="showModule('registry')"><i class="ti ti-users"></i>Nurse registry</div>
+    <div class="nav-item" id="nav-rules" onclick="showModule('rules')"><i class="ti ti-adjustments-horizontal"></i>Rule engine</div>
+    <div class="nav-section">Scheduling</div>
+    <div class="nav-item" id="nav-roster" onclick="showModule('roster')"><i class="ti ti-calendar-month"></i>Roster builder<span class="nav-pip pip-purple">AI</span></div>
+    <div class="nav-item danger" id="nav-disruption" onclick="showModule('disruption')"><i class="ti ti-alert-triangle"></i>Disruptions<span class="nav-pip pip-red">1</span></div>
+    <div class="nav-section">Oversight</div>
+    <div class="nav-item" id="nav-dashboard" onclick="showModule('dashboard')"><i class="ti ti-chart-bar"></i>Dashboard</div>
+    <div class="nav-item" id="nav-approvals" onclick="showModule('approvals')"><i class="ti ti-checks"></i>Approvals</div>
+    <div class="sidebar-footer">Prototype · Not for clinical use</div>
+  </div>
+
+  <!-- ─── MAIN ─── -->
+  <div class="main-area">
+
+    <!-- ══ MODULE: NURSE REGISTRY ══ -->
+    <div class="module active" id="mod-registry">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="tb-title">Nurse registry</div>
+          <div class="tb-sub">Master database of all nursing staff across units</div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-sm" onclick="openImportPanel()"><i class="ti ti-upload"></i>Import Excel</button>
+          <button class="btn btn-primary btn-sm" onclick="openAddPanel()"><i class="ti ti-plus"></i>Add nurse</button>
+        </div>
+      </div>
+      <div class="filters-bar">
+        <div class="search-wrap">
+          <i class="ti ti-search"></i>
+          <input type="text" id="reg-search" placeholder="Search name or ID…" oninput="filterRegistry()">
+        </div>
+        <select id="reg-ward" onchange="filterRegistry()">
+          <option value="">All wards</option>
+          <option>General Ward</option><option>ICU</option><option>ED</option>
+          <option>OR</option><option>HDU</option><option>Maternity</option>
+        </select>
+        <select id="reg-pk" onchange="filterRegistry()">
+          <option value="">All PK levels</option>
+          <option>PK I</option><option>PK II</option><option>PK III</option><option>PK IV</option>
+        </select>
+        <select id="reg-status" onchange="filterRegistry()">
+          <option value="">All statuses</option>
+          <option>Active</option><option>On leave</option><option>Day off</option>
+        </select>
+      </div>
+      <div class="stats-strip" id="reg-stats">
+        <div class="stat-chip"><div class="stat-num num-teal" id="s-total">14</div><div class="stat-lbl">Total nurses</div></div>
+        <div class="stat-chip"><div class="stat-num num-teal" id="s-active">9</div><div class="stat-lbl">Active today</div></div>
+        <div class="stat-chip"><div class="stat-num num-amber" id="s-leave">3</div><div class="stat-lbl">On leave</div></div>
+        <div class="stat-chip"><div class="stat-num" id="s-expiry">2</div><div class="stat-lbl">Cert expiring</div></div>
+      </div>
+      <div class="scroll-area" style="position:relative">
+        <table class="data-table" id="reg-table">
+          <thead><tr>
+            <th style="width:200px">Nurse</th>
+            <th style="width:85px">PK level</th>
+            <th style="width:105px">Ward</th>
+            <th style="width:140px">Competencies</th>
+            <th style="width:85px">Contract</th>
+            <th style="width:80px">Status</th>
+            <th style="width:46px"></th>
+          </tr></thead>
+          <tbody id="reg-tbody"></tbody>
+        </table>
+        <div id="reg-panel" style="display:none;position:absolute;inset:0;z-index:20">
+          <div class="panel-overlay" onclick="closeRegPanel()">
+            <div class="panel" onclick="event.stopPropagation()" id="reg-panel-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODULE: RULE ENGINE ══ -->
+    <div class="module" id="mod-rules">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="tb-title">Rule engine</div>
+          <div class="tb-sub">Configure scheduling constraints independently per department</div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-sm" onclick="resetRules()"><i class="ti ti-refresh"></i>Reset defaults</button>
+          <button class="btn btn-primary btn-sm" onclick="saveRules()"><i class="ti ti-check"></i>Save rules</button>
+        </div>
+      </div>
+      <div class="dept-tabs" id="dept-tabs"></div>
+      <div class="scroll-area">
+        <div class="rules-grid" id="rules-content"></div>
+      </div>
+      <div class="save-bar">
+        <span class="save-hint" id="rules-hint">Select a department above to configure its rules</span>
+        <button class="btn btn-primary btn-sm" onclick="showModule('roster')">Continue to roster builder →</button>
+      </div>
+    </div>
+
+    <!-- ══ MODULE: ROSTER BUILDER ══ -->
+    <div class="module" id="mod-roster">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="tb-title">AI roster builder</div>
+          <div class="tb-sub">Auto-generate monthly schedules — AI respects all configured rules and shows reasoning</div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-sm" onclick="clearRoster()"><i class="ti ti-trash"></i>Clear</button>
+          <button class="btn btn-sm" onclick="exportRosterMsg()"><i class="ti ti-download"></i>Export</button>
+          <button class="btn btn-primary btn-sm" id="approve-btn" style="display:none" onclick="alert('Submitted for HOD approval. Notification sent.')"><i class="ti ti-checks"></i>Submit for approval</button>
+        </div>
+      </div>
+      <div class="roster-controls">
+        <span class="ctrl-label">Ward</span>
+        <select id="roster-ward" onchange="onRosterWardChange()">
+          <option value="icu">ICU</option><option value="gw">General ward</option>
+          <option value="ed">ED</option><option value="or">OR</option>
+          <option value="hdu">HDU</option><option value="mat">Maternity</option>
+        </select>
+        <span class="ctrl-label">Month</span>
+        <select id="roster-month">
+          <option value="7">July 2025</option><option value="8">August 2025</option><option value="9">September 2025</option>
+        </select>
+        <div id="roster-rule-chips" style="display:flex;gap:5px;margin-left:4px"></div>
+        <button class="btn btn-ai btn-sm" onclick="generateRoster()" style="margin-left:auto"><i class="ti ti-sparkles"></i>Generate with AI</button>
+      </div>
+      <div style="flex:1;display:flex;overflow:hidden;min-height:0">
+        <div class="grid-container" id="roster-grid-wrap">
+          <div class="empty-module" id="roster-empty">
+            <i class="ti ti-calendar-month"></i>
+            <div class="em-title">No roster generated yet</div>
+            <div class="em-sub">Select a ward and month, then click Generate with AI to auto-build a compliant schedule</div>
+            <button class="btn btn-ai" style="margin-top:8px" onclick="generateRoster()"><i class="ti ti-sparkles"></i>Generate with AI</button>
+          </div>
+          <div id="roster-grid" style="display:none"></div>
+          <div id="roster-loading" style="display:none;position:absolute;inset:0;background:rgba(255,255,255,0.92);flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:5">
+            <div class="spinner"></div>
+            <div style="font-size:13px;font-weight:500;color:var(--purple-mid)" id="roster-load-txt">Analysing nurse profiles…</div>
+            <div style="font-size:11px;color:var(--text-secondary)" id="roster-load-sub">Checking competencies and availability</div>
+          </div>
+        </div>
+        <div class="ai-side">
+          <div class="ai-side-hd"><div class="ai-dot"></div><div class="ai-hd-title">AI reasoning</div></div>
+          <div class="ai-body" id="roster-ai-body">
+            <div class="ai-empty-state"><i class="ti ti-brain"></i><p>AI reasoning will appear here once you generate a roster</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="roster-status">
+        <span id="roster-status-txt">Select a ward and click Generate with AI to begin</span>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-swatch sc-M">M</span><span>Morning</span></div>
+          <div class="legend-item"><span class="legend-swatch sc-A">A</span><span>Afternoon</span></div>
+          <div class="legend-item"><span class="legend-swatch sc-N">N</span><span>Night</span></div>
+          <div class="legend-item"><span class="legend-swatch sc-L">L</span><span>Leave</span></div>
+          <div class="legend-item"><span class="legend-swatch sc-O">O</span><span>Off</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODULE: DISRUPTION HANDLER ══ -->
+    <div class="module" id="mod-disruption">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="tb-title">Disruption handler</div>
+          <div class="tb-sub">AI finds compliant replacements — ranked by ward fit, skill mix, rest hours and overtime risk</div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-sm" onclick="resetDisruption()"><i class="ti ti-refresh"></i>New disruption</button>
+        </div>
+      </div>
+      <div class="alert-banner">
+        <i class="ti ti-alert-triangle" style="font-size:18px;color:#A32D2D;flex-shrink:0"></i>
+        <div class="alert-text"><strong>1 active disruption</strong> — Ratna Sari (N-012, ICU, PK III) called in sick for the Night shift. Replacement needed urgently.</div>
+      </div>
+      <div class="disruption-body">
+        <div class="d-left">
+          <div class="col-hd"><span>Absence report</span><button class="btn btn-xs" onclick="alert('Opens new absence form for any nurse')"><i class="ti ti-plus"></i>New</button></div>
+          <div class="scroll-area" style="padding:12px">
+            <div class="absent-form">
+              <div class="af-name">Ratna Sari</div>
+              <div class="af-meta">N-012 · ICU · PK III · ACLS certified</div>
+              <div class="af-field"><span class="af-label">Absence type</span>
+                <select><option>Sick leave</option><option>Emergency leave</option><option>No-show</option></select></div>
+              <div class="af-field"><span class="af-label">Affected shift</span>
+                <select id="d-shift"><option value="N">Night (23:00–07:00)</option><option value="M">Morning (07:00–15:00)</option><option value="A">Afternoon (15:00–23:00)</option></select></div>
+              <div class="af-field"><span class="af-label">Date</span><input type="date" value="2025-07-15"></div>
+              <div class="af-field"><span class="af-label">Ward</span>
+                <select><option>ICU</option><option>General Ward</option><option>ED</option><option>OR</option><option>HDU</option><option>Maternity</option></select></div>
+              <button class="btn btn-ai" style="width:100%;justify-content:center;margin-top:6px" onclick="findReplacements()"><i class="ti ti-sparkles"></i>Find replacements with AI</button>
+            </div>
+            <div class="section-lbl">Shift impact · ICU today</div>
+            <div class="impact-card">
+              <div class="impact-row"><span class="sc sc-N" style="width:24px;height:18px;font-size:9px">N</span><span style="flex:1;font-size:12px;color:var(--text-secondary)">Night · 23:00–07:00</span><span style="font-size:10px;background:var(--red-light);color:var(--red-dark);padding:1px 7px;border-radius:20px">PK III gap</span></div>
+              <div class="impact-row"><span class="sc sc-M" style="width:24px;height:18px;font-size:9px">M</span><span style="flex:1;font-size:12px;color:var(--text-secondary)">Morning · 07:00–15:00</span><span style="font-size:10px;color:var(--text-tertiary)">Covered</span></div>
+              <div class="impact-row"><span class="sc sc-A" style="width:24px;height:18px;font-size:9px">A</span><span style="flex:1;font-size:12px;color:var(--text-secondary)">Afternoon · 15:00–23:00</span><span style="font-size:10px;color:var(--text-tertiary)">Covered</span></div>
+            </div>
+            <div class="section-lbl">Active rules · ICU</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="font-size:11px;padding:5px 8px;background:var(--red-light);color:var(--red-dark);border-radius:var(--radius-md);border:0.5px solid #F7C1C1">Min 2× PK III per shift · <strong>hard</strong></div>
+              <div style="font-size:11px;padding:5px 8px;background:var(--red-light);color:var(--red-dark);border-radius:var(--radius-md);border:0.5px solid #F7C1C1">Min 10h rest between shifts · <strong>hard</strong></div>
+              <div style="font-size:11px;padding:5px 8px;background:var(--red-light);color:var(--red-dark);border-radius:var(--radius-md);border:0.5px solid #F7C1C1">ICU Core + ACLS required · <strong>hard</strong></div>
+              <div style="font-size:11px;padding:5px 8px;background:var(--blue-light);color:var(--blue-dark);border-radius:var(--radius-md);border:0.5px solid #B5D4F4">Minimise overtime · <strong>soft</strong></div>
+            </div>
+          </div>
+        </div>
+        <div class="d-right">
+          <div class="col-hd"><span id="d-results-hd">AI replacement candidates</span><span style="font-size:11px;color:var(--text-secondary)" id="d-results-count"></span></div>
+          <div class="scroll-area" style="padding:12px" id="d-results-scroll">
+            <div class="empty-module" id="d-empty" style="height:auto;padding:40px 20px">
+              <i class="ti ti-users"></i>
+              <div class="em-title" style="font-size:13px">No candidates yet</div>
+              <div class="em-sub">Click Find replacements with AI to get ranked, compliant candidates with full reasoning</div>
+            </div>
+            <div id="d-candidates"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODULE: DASHBOARD ══ -->
+    <div class="module" id="mod-dashboard">
+      <div class="topbar"><div class="topbar-left"><div class="tb-title">Dashboard</div><div class="tb-sub">Hospital-wide scheduling overview</div></div></div>
+      <div class="empty-module">
+        <i class="ti ti-chart-bar"></i>
+        <div class="em-title">Dashboard</div>
+        <div class="em-sub">Overtime trends, leave patterns, and unit-level compliance metrics — coming in v0.2</div>
+      </div>
+    </div>
+
+    <!-- ══ MODULE: APPROVALS ══ -->
+    <div class="module" id="mod-approvals">
+      <div class="topbar"><div class="topbar-left"><div class="tb-title">Approvals</div><div class="tb-sub">Roster sign-off workflow</div></div></div>
+      <div class="empty-module">
+        <i class="ti ti-checks"></i>
+        <div class="em-title">Approval workflow</div>
+        <div class="em-sub">HOD and Kadiv sign-off queue — coming in v0.2</div>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+</div><!-- /app-shell -->
+
+<script>
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+const NURSES = [
+  {id:'N-001',name:'Sari Dewi',initials:'SD',av:'teal',pk:'PK III',ward:'ICU',contract:'Permanent',status:'Active',edu:'S1/Ners',comps:['ACLS','BLS','ICU Core'],blsExp:'2025-12-01',aclsExp:'2026-03-15',avail:'Full-time',restrict:'ICU only'},
+  {id:'N-002',name:'Rina Kartika',initials:'RK',av:'blue',pk:'PK II',ward:'General Ward',contract:'Permanent',status:'Active',edu:'DIII',comps:['BLS','Core'],blsExp:'2026-08-10',aclsExp:null,avail:'Full-time',restrict:'General/HDU'},
+  {id:'N-003',name:'Putri Maharani',initials:'PM',av:'purple',pk:'PK IV',ward:'ICU',contract:'Permanent',status:'Active',edu:'S2',comps:['ACLS','BLS','ICU Core','PICU'],blsExp:'2026-11-22',aclsExp:'2026-11-22',avail:'Full-time',restrict:'ICU/HDU'},
+  {id:'N-004',name:'Dewi Susanti',initials:'DS',av:'amber',pk:'PK I',ward:'General Ward',contract:'Probation',status:'Active',edu:'DIII',comps:['BLS'],blsExp:'2025-10-05',aclsExp:null,avail:'Full-time',restrict:'General Ward'},
+  {id:'N-005',name:'Anisa Rahmawati',initials:'AR',av:'teal',pk:'PK II',ward:'ED',contract:'Permanent',status:'On leave',edu:'S1/Ners',comps:['BLS','BTLS','Triage'],blsExp:'2026-07-14',aclsExp:null,avail:'Full-time',restrict:'ED/General'},
+  {id:'N-006',name:'Mega Wulandari',initials:'MW',av:'blue',pk:'PK III',ward:'OR',contract:'Permanent',status:'Active',edu:'S1/Ners',comps:['BLS','Surgical','Scrub'],blsExp:'2026-09-30',aclsExp:null,avail:'Full-time',restrict:'OR only'},
+  {id:'N-007',name:'Fitri Handayani',initials:'FH',av:'purple',pk:'PK II',ward:'HDU',contract:'Permanent',status:'Day off',edu:'DIII',comps:['BLS','HDU Core'],blsExp:'2026-04-18',aclsExp:null,avail:'Full-time',restrict:'HDU/General'},
+  {id:'N-008',name:'Yuni Astuti',initials:'YA',av:'amber',pk:'PK III',ward:'Maternity',contract:'Permanent',status:'Active',edu:'S1/Ners',comps:['BLS','Midwifery','Neonatal'],blsExp:'2025-09-20',aclsExp:null,avail:'Full-time',restrict:'Maternity'},
+  {id:'N-009',name:'Lestari Ningrum',initials:'LN',av:'teal',pk:'PK II',ward:'General Ward',contract:'Permanent',status:'Active',edu:'DIII',comps:['BLS','Core'],blsExp:'2026-06-25',aclsExp:null,avail:'Part-time',restrict:'General Ward'},
+  {id:'N-010',name:'Hana Permata',initials:'HP',av:'blue',pk:'PK I',ward:'General Ward',contract:'Probation',status:'On leave',edu:'DIII',comps:['BLS'],blsExp:'2026-02-11',aclsExp:null,avail:'Full-time',restrict:'General Ward'},
+  {id:'N-011',name:'Sri Wahyuni',initials:'SW',av:'purple',pk:'PK IV',ward:'ED',contract:'Permanent',status:'Active',edu:'S2',comps:['ACLS','BLS','BTLS','Triage','Trauma'],blsExp:'2027-01-08',aclsExp:'2027-01-08',avail:'Full-time',restrict:'ED/ICU'},
+  {id:'N-012',name:'Ratna Sari',initials:'RS',av:'amber',pk:'PK III',ward:'ICU',contract:'Permanent',status:'On leave',edu:'S1/Ners',comps:['ACLS','BLS','ICU Core'],blsExp:'2026-05-17',aclsExp:'2026-05-17',avail:'Full-time',restrict:'ICU only'},
+  {id:'N-013',name:'Indah Kusuma',initials:'IK',av:'teal',pk:'PK II',ward:'OR',contract:'Permanent',status:'Active',edu:'S1/Ners',comps:['BLS','Scrub','Circulating'],blsExp:'2026-10-03',aclsExp:null,avail:'Full-time',restrict:'OR only'},
+  {id:'N-014',name:'Nurul Hidayah',initials:'NH',av:'blue',pk:'PK I',ward:'Maternity',contract:'Probation',status:'On leave',edu:'DIII',comps:['BLS'],blsExp:'2025-11-12',aclsExp:null,avail:'Full-time',restrict:'Maternity'},
+];
+
+const WARD_NURSES = {
+  icu:[
+    {id:'N-001',name:'Sari Dewi',pk:'PK III',comps:['ACLS','ICU Core'],pref:'M'},
+    {id:'N-003',name:'Putri Maharani',pk:'PK IV',comps:['ACLS','ICU Core','PICU'],pref:'A'},
+    {id:'N-012',name:'Ratna Sari',pk:'PK III',comps:['ACLS','ICU Core'],pref:'N',status:'leave'},
+    {id:'N-015',name:'Budi Santoso',pk:'PK II',comps:['BLS','ICU Core'],pref:'N'},
+    {id:'N-016',name:'Citra Lestari',pk:'PK II',comps:['BLS','ICU Core'],pref:'M'},
+    {id:'N-017',name:'Agus Pramono',pk:'PK III',comps:['ACLS','BLS','ICU Core'],pref:'A'},
+  ],
+  gw:[
+    {id:'N-002',name:'Rina Kartika',pk:'PK II',comps:['BLS'],pref:'M'},
+    {id:'N-004',name:'Dewi Susanti',pk:'PK I',comps:['BLS'],pref:'M'},
+    {id:'N-009',name:'Lestari Ningrum',pk:'PK II',comps:['BLS'],pref:'A',avail:'part-time'},
+    {id:'N-010',name:'Hana Permata',pk:'PK I',comps:['BLS'],pref:'A',status:'leave'},
+    {id:'N-018',name:'Endah Wijaya',pk:'PK III',comps:['BLS','Core'],pref:'N'},
+    {id:'N-019',name:'Fajar Nugroho',pk:'PK II',comps:['BLS'],pref:'M'},
+    {id:'N-020',name:'Gita Puspita',pk:'PK II',comps:['BLS'],pref:'N'},
+  ],
+  ed:[
+    {id:'N-005',name:'Anisa Rahmawati',pk:'PK II',comps:['BLS','BTLS'],pref:'M',status:'leave'},
+    {id:'N-011',name:'Sri Wahyuni',pk:'PK IV',comps:['ACLS','BTLS','Triage'],pref:'A'},
+    {id:'N-021',name:'Hendra Kusuma',pk:'PK III',comps:['BLS','Triage'],pref:'N'},
+    {id:'N-022',name:'Ika Sulistya',pk:'PK II',comps:['BLS','BTLS'],pref:'M'},
+    {id:'N-023',name:'Joko Prabowo',pk:'PK III',comps:['ACLS','Triage'],pref:'A'},
+  ],
+  or:[
+    {id:'N-006',name:'Mega Wulandari',pk:'PK III',comps:['Surgical','Scrub'],pref:'M'},
+    {id:'N-013',name:'Indah Kusuma',pk:'PK II',comps:['Scrub','Circulating'],pref:'M'},
+    {id:'N-024',name:'Kiki Andini',pk:'PK III',comps:['Surgical','Scrub'],pref:'A'},
+    {id:'N-025',name:'Lutfi Hakim',pk:'PK II',comps:['Scrub'],pref:'M'},
+  ],
+  hdu:[
+    {id:'N-007',name:'Fitri Handayani',pk:'PK II',comps:['BLS','HDU Core'],pref:'M'},
+    {id:'N-026',name:'Maya Indriani',pk:'PK III',comps:['BLS','HDU Core'],pref:'N'},
+    {id:'N-027',name:'Nana Pertiwi',pk:'PK II',comps:['BLS'],pref:'A'},
+    {id:'N-028',name:'Oki Setiawan',pk:'PK II',comps:['BLS','HDU Core'],pref:'M'},
+  ],
+  mat:[
+    {id:'N-008',name:'Yuni Astuti',pk:'PK III',comps:['Midwifery','Neonatal'],pref:'M'},
+    {id:'N-014',name:'Nurul Hidayah',pk:'PK I',comps:['BLS'],pref:'A',status:'leave'},
+    {id:'N-029',name:'Putri Anggraini',pk:'PK II',comps:['Midwifery'],pref:'N'},
+    {id:'N-030',name:'Qori Ramadhan',pk:'PK III',comps:['Midwifery','Neonatal'],pref:'M'},
+  ],
+};
+
+const WARD_RULES = {
+  icu:{minPKIII:2,maxNights:3,minRest:10,maxLeave:1,crossWard:false,maxWeekly:42},
+  gw:{minPKIII:1,maxNights:3,minRest:10,maxLeave:2,crossWard:true,maxWeekly:40},
+  ed:{minPKIII:1,maxNights:2,minRest:10,maxLeave:1,crossWard:false,maxWeekly:40},
+  or:{minPKIII:1,maxNights:3,minRest:10,maxLeave:1,crossWard:false,maxWeekly:40},
+  hdu:{minPKIII:1,maxNights:3,minRest:10,maxLeave:1,crossWard:true,maxWeekly:40},
+  mat:{minPKIII:1,maxNights:3,minRest:10,maxLeave:1,crossWard:false,maxWeekly:40},
+};
+
+const WARD_LABELS = {icu:'ICU',gw:'General ward',ed:'ED',or:'OR',hdu:'HDU',mat:'Maternity'};
+const WARD_BADGE = {'General Ward':'badge-gw','ICU':'badge-icu','ED':'badge-ed','OR':'badge-or','HDU':'badge-hdu','Maternity':'badge-mat'};
+const PK_BADGE = {'PK I':'badge-pk1','PK II':'badge-pk2','PK III':'badge-pk3','PK IV':'badge-pk4'};
+const PK_COLOR = {'PK IV':'#534AB7','PK III':'#1D9E75','PK II':'#185FA5','PK I':'#888780'};
+const MONTH_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function showModule(id){
+  document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
+  document.getElementById('mod-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='rules' && !rulesInitialized) initRules();
+  if(id==='roster') renderRosterRuleChips();
+}
+
+// ═══════════════════════════════════════════
+// REGISTRY
+// ═══════════════════════════════════════════
+function expiringSoon(d){
+  if(!d) return false;
+  const diff=(new Date(d)-new Date())/(86400000);
+  return diff>0&&diff<90;
+}
+function renderRegistry(data){
+  const tb=document.getElementById('reg-tbody');
+  tb.innerHTML=data.map(n=>`
+    <tr>
+      <td><div class="nurse-cell">
+        <div class="avatar av-${n.av}" style="width:28px;height:28px;font-size:11px">${n.initials}</div>
+        <div><div class="nurse-name">${n.name}</div><div class="nurse-id">${n.id}</div></div>
+      </div></td>
+      <td><span class="badge ${PK_BADGE[n.pk]}">${n.pk}</span></td>
+      <td><span class="badge ${WARD_BADGE[n.ward]||'badge-gw'}">${n.ward}</span></td>
+      <td><div style="display:flex;gap:3px;flex-wrap:nowrap">${n.comps.slice(0,2).map(c=>`<span class="comp-tag">${c}</span>`).join('')}${n.comps.length>2?`<span class="comp-tag">+${n.comps.length-2}</span>`:''}</div></td>
+      <td style="font-size:12px;color:var(--text-secondary)">${n.contract}</td>
+      <td><span class="dot dot-${n.status==='Active'?'active':n.status==='On leave'?'leave':'off'}"></span>${n.status}</td>
+      <td><button class="btn btn-ghost btn-xs" onclick="openProfile('${n.id}')" style="opacity:0.5;transition:opacity 0.1s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5"><i class="ti ti-eye"></i></button></td>
+    </tr>`).join('');
+  document.getElementById('s-total').textContent=data.length;
+  document.getElementById('s-active').textContent=data.filter(n=>n.status==='Active').length;
+  document.getElementById('s-leave').textContent=data.filter(n=>n.status==='On leave').length;
+  document.getElementById('s-expiry').textContent=data.filter(n=>expiringSoon(n.blsExp)||expiringSoon(n.aclsExp)).length;
+}
+function filterRegistry(){
+  const q=document.getElementById('reg-search').value.toLowerCase();
+  const w=document.getElementById('reg-ward').value;
+  const pk=document.getElementById('reg-pk').value;
+  const st=document.getElementById('reg-status').value;
+  renderRegistry(NURSES.filter(n=>
+    (!q||n.name.toLowerCase().includes(q)||n.id.toLowerCase().includes(q))&&
+    (!w||n.ward===w)&&(!pk||n.pk===pk)&&(!st||n.status===st)));
+}
+function openProfile(id){
+  const n=NURSES.find(x=>x.id===id); if(!n) return;
+  const bw=expiringSoon(n.blsExp), aw=n.aclsExp&&expiringSoon(n.aclsExp);
+  document.getElementById('reg-panel-content').innerHTML=`
+    <div class="panel-header"><div class="panel-title">Nurse profile</div><button class="btn btn-ghost btn-xs" onclick="closeRegPanel()"><i class="ti ti-x"></i></button></div>
+    <div class="panel-body">
+      <div class="avatar av-${n.av}" style="width:48px;height:48px;font-size:16px;margin-bottom:10px">${n.initials}</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:2px">${n.name}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px">${n.id} · ${n.ward} · ${n.contract}</div>
+      <div class="p-section">Identity</div>
+      <div class="p-row"><span class="p-label">PK level</span><span class="badge ${PK_BADGE[n.pk]}">${n.pk}</span></div>
+      <div class="p-row"><span class="p-label">Education</span><span class="p-val">${n.edu}</span></div>
+      <div class="p-row"><span class="p-label">Availability</span><span class="p-val">${n.avail}</span></div>
+      <div class="p-row"><span class="p-label">Status</span><span class="p-val"><span class="dot dot-${n.status==='Active'?'active':n.status==='On leave'?'leave':'off'}"></span>${n.status}</span></div>
+      <div class="p-row"><span class="p-label">Ward restriction</span><span class="p-val" style="font-size:12px">${n.restrict}</span></div>
+      <div class="p-section">Competencies</div>
+      <div class="pill-grid">${n.comps.map(c=>`<span class="pill">${c}</span>`).join('')}</div>
+      <div class="p-section">Certifications</div>
+      <div class="p-row"><span class="p-label">BLS expiry</span><span class="${bw?'cert-warn':'cert-ok'}">${n.blsExp||'—'}${bw?' ⚠':''}</span></div>
+      ${n.aclsExp?`<div class="p-row"><span class="p-label">ACLS expiry</span><span class="${aw?'cert-warn':'cert-ok'}">${n.aclsExp}${aw?' ⚠':''}</span></div>`:''}
+    </div>`;
+  document.getElementById('reg-panel').style.display='block';
+}
+function openAddPanel(){
+  document.getElementById('reg-panel-content').innerHTML=`
+    <div class="panel-header"><div class="panel-title">Add nurse</div><button class="btn btn-ghost btn-xs" onclick="closeRegPanel()"><i class="ti ti-x"></i></button></div>
+    <div class="panel-body">
+      <div class="form-row"><div class="form-group"><label class="form-label">Full name</label><input placeholder="e.g. Sari Dewi"></div><div class="form-group"><label class="form-label">Employee ID</label><input placeholder="N-015"></div></div>
+      <div class="form-row" style="margin-top:10px"><div class="form-group"><label class="form-label">Ward</label><select><option>General Ward</option><option>ICU</option><option>ED</option><option>OR</option><option>HDU</option><option>Maternity</option></select></div><div class="form-group"><label class="form-label">PK level</label><select><option>PK I</option><option>PK II</option><option>PK III</option><option>PK IV</option></select></div></div>
+      <div class="form-row" style="margin-top:10px"><div class="form-group"><label class="form-label">Education</label><select><option>DIII</option><option>S1/Ners</option><option>S2</option></select></div><div class="form-group"><label class="form-label">Contract</label><select><option>Permanent</option><option>Probation</option></select></div></div>
+      <div class="form-group" style="margin-top:10px"><label class="form-label">Competencies (comma-separated)</label><input placeholder="BLS, ACLS, ICU Core"></div>
+      <div class="form-row" style="margin-top:10px"><div class="form-group"><label class="form-label">BLS expiry</label><input type="date"></div><div class="form-group"><label class="form-label">ACLS expiry</label><input type="date"></div></div>
+      <div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-primary" style="flex:1" onclick="closeRegPanel()">Save nurse</button><button class="btn" onclick="closeRegPanel()">Cancel</button></div>
+    </div>`;
+  document.getElementById('reg-panel').style.display='block';
+}
+function openImportPanel(){
+  document.getElementById('reg-panel-content').innerHTML=`
+    <div class="panel-header"><div class="panel-title">Import from Excel</div><button class="btn btn-ghost btn-xs" onclick="closeRegPanel()"><i class="ti ti-x"></i></button></div>
+    <div class="panel-body">
+      <div style="border:1.5px dashed var(--border-mid);border-radius:var(--radius-lg);padding:32px;text-align:center;margin-bottom:16px">
+        <i class="ti ti-upload" style="font-size:28px;color:var(--text-tertiary);display:block;margin-bottom:8px"></i>
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">Drop your Excel file here</div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Supports .xlsx and .csv</div>
+        <button class="btn btn-sm">Choose file</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;font-weight:500">Expected columns:</div>
+      <div style="font-size:11px;color:var(--text-secondary);line-height:1.8">Name · Employee ID · Ward · PK Level · Education · Contract · Competencies · BLS Expiry · ACLS Expiry · Availability</div>
+      <button class="btn btn-sm" style="margin-top:12px"><i class="ti ti-download"></i>Download template</button>
+    </div>`;
+  document.getElementById('reg-panel').style.display='block';
+}
+function closeRegPanel(){ document.getElementById('reg-panel').style.display='none'; }
+renderRegistry(NURSES);
+
+// ═══════════════════════════════════════════
+// RULE ENGINE
+// ═══════════════════════════════════════════
+let rulesInitialized=false, activeRuleDept='icu', ruleDirty={};
+const defRules=()=>({minRestHours:{v:10,on:true},maxConsecNights:{v:3,on:true},maxWeeklyHours:{v:40,on:true},minPKIII:{v:1,on:true},seniorN:{v:1,on:true},seniorD:{v:2,on:true},maxLeave:{v:2,on:true},fairNight:{on:true},fairWeekend:{on:true},fairHoliday:{on:true},crossWard:{on:false},leaveBlackout:{on:true}});
+const ruleOverrides={icu:{minPKIII:{v:2,on:true},maxWeeklyHours:{v:42,on:true},crossWard:{on:false},maxLeave:{v:1,on:true}},gw:{crossWard:{on:true}},ed:{maxConsecNights:{v:2,on:true},crossWard:{on:false}},or:{crossWard:{on:false},fairNight:{on:false}},hdu:{crossWard:{on:true}},mat:{crossWard:{on:false}}};
+let ruleState={};
+const DEPTS=[{id:'icu',label:'ICU'},{id:'gw',label:'General ward'},{id:'ed',label:'ED'},{id:'or',label:'OR'},{id:'hdu',label:'HDU'},{id:'mat',label:'Maternity'}];
+
+function initRules(){
+  DEPTS.forEach(d=>{const b=defRules(),ov=ruleOverrides[d.id]||{};Object.keys(ov).forEach(k=>{b[k]={...b[k],...ov[k]};});ruleState[d.id]=b;});
+  rulesInitialized=true;
+  renderDeptTabs();
+  renderRuleCards();
+}
+function renderDeptTabs(){
+  document.getElementById('dept-tabs').innerHTML=DEPTS.map(d=>`
+    <div class="dept-tab${d.id===activeRuleDept?' active':''}" onclick="switchRuleDept('${d.id}')">${d.label}${ruleDirty[d.id]?`<span class="unsaved-dot"></span>`:''}</div>`).join('');
+}
+function switchRuleDept(id){activeRuleDept=id;renderDeptTabs();renderRuleCards();}
+function setRuleVal(k,f,v){if(!ruleDirty[activeRuleDept])ruleDirty[activeRuleDept]=true;ruleState[activeRuleDept][k][f]=v;renderDeptTabs();}
+function toggleRule(k){setRuleVal(k,'on',!ruleState[activeRuleDept][k].on);renderRuleCards();}
+function setNum(k,v){const n=parseInt(v);if(!isNaN(n)&&n>0)setRuleVal(k,'v',n);}
+function saveRules(){ruleDirty[activeRuleDept]=false;renderDeptTabs();document.getElementById('rules-hint').textContent=DEPTS.find(d=>d.id===activeRuleDept).label+' rules saved';}
+function resetRules(){const b=defRules(),ov=ruleOverrides[activeRuleDept]||{};Object.keys(ov).forEach(k=>{b[k]={...b[k],...ov[k]};});ruleState[activeRuleDept]=b;ruleDirty[activeRuleDept]=false;renderDeptTabs();renderRuleCards();document.getElementById('rules-hint').textContent='Reset to defaults';}
+function tog(k,on){return`<label class="toggle" aria-label="Toggle ${k}"><input type="checkbox" ${on?'checked':''} onchange="toggleRule('${k}')"><span class="toggle-slider"></span></label>`;}
+function numInput(k,v,min,max,enabled){return`<input type="number" class="rule-input" value="${v}" min="${min}" max="${max}" ${!enabled?'disabled':''} onchange="setNum('${k}',this.value)">`;}
+
+function renderRuleCards(){
+  const s=ruleState[activeRuleDept];
+  const dLabel=DEPTS.find(d=>d.id===activeRuleDept).label;
+  document.getElementById('rules-content').innerHTML=`
+    <div class="info-note"><i class="ti ti-info-circle" style="font-size:15px;flex-shrink:0;margin-top:1px"></i><span>Rules below apply only to <strong>${dLabel}</strong>. Hard rules are enforced absolutely by the AI. Soft rules are optimised but can be overridden with a reason.</span></div>
+    <div class="rule-card">
+      <div class="rule-section-hd"><i class="ti ti-clock" style="font-size:16px;color:var(--text-secondary)"></i><div><div class="rule-section-title">Rest &amp; hours</div><div class="rule-section-desc">Fatigue and labour compliance</div></div></div>
+      ${ruleRow('minRestHours','Minimum rest between shifts','Hours off required between any two shifts','ti-moon','hard',true,'hours',1,24)}
+      ${ruleRow('maxConsecNights','Max consecutive night shifts','Back-to-back nights cap','ti-moon-stars','hard',true,'nights',1,7)}
+      ${ruleRow('maxWeeklyHours','Maximum weekly hours','Total hours cap per week','ti-clock','hard',true,'hours',20,60)}
+    </div>
+    <div class="rule-card">
+      <div class="rule-section-hd"><i class="ti ti-certificate" style="font-size:16px;color:var(--text-secondary)"></i><div><div class="rule-section-title">Skill mix</div><div class="rule-section-desc">Competency coverage per shift</div></div></div>
+      ${ruleRow('minPKIII','Min PK III per shift','Senior-level nurse minimum per shift','ti-star','hard',true,'nurses',1,5)}
+      ${ruleRowRatio()}
+      ${ruleRowToggle('crossWard','Cross-ward allocation allowed','Pull eligible nurses from other wards to cover','ti-arrows-shuffle','soft')}
+    </div>
+    <div class="rule-card">
+      <div class="rule-section-hd"><i class="ti ti-calendar-off" style="font-size:16px;color:var(--text-secondary)"></i><div><div class="rule-section-title">Leave control</div><div class="rule-section-desc">Prevent understaffing from concurrent leave</div></div></div>
+      ${ruleRow('maxLeave','Max simultaneous on leave','Max nurses from this unit on leave at once','ti-beach','hard',true,'nurses',1,10)}
+      ${ruleRowToggle('leaveBlackout','Respect blackout dates','Block leave during high-demand periods','ti-lock','hard')}
+    </div>
+    <div class="rule-card">
+      <div class="rule-section-hd"><i class="ti ti-scale" style="font-size:16px;color:var(--text-secondary)"></i><div><div class="rule-section-title">Fairness</div><div class="rule-section-desc">AI optimises distribution across the cycle</div></div></div>
+      ${ruleRowToggle('fairNight','Equal night shift distribution','Balance nights evenly across all nurses','ti-moon','soft')}
+      ${ruleRowToggle('fairWeekend','Equal weekend distribution','Balance weekends evenly','ti-calendar-week','soft')}
+      ${ruleRowToggle('fairHoliday','Equal public holiday distribution','Balance public holidays evenly','ti-confetti','soft')}
+    </div>`;
+  document.getElementById('rules-hint').textContent=`Editing ${dLabel} — click Save rules when done`;
+}
+function ruleRow(k,name,desc,icon,type,hasNum,unit,min,max){
+  const s=ruleState[activeRuleDept][k];
+  return`<div class="rule-row"><div class="rule-icon"><i class="ti ${icon}"></i></div><div class="rule-info"><div class="rn">${name} <span class="badge badge-${type}">${type}</span></div><div class="rd">${desc}</div></div>${hasNum?`<div class="rule-control">${numInput(k,s.v,min,max,s.on)}<span class="rule-unit">${unit}</span></div>`:''}<div>${tog(k,s.on)}</div></div>`;
+}
+function ruleRowRatio(){
+  const s=ruleState[activeRuleDept];
+  return`<div class="rule-row"><div class="rule-icon"><i class="ti ti-users"></i></div><div class="rule-info"><div class="rn">Senior-to-junior ratio <span class="badge badge-soft">soft</span></div><div class="rd">Target ratio per shift</div></div><div class="rule-control"><input type="number" class="rule-input" style="width:44px" value="${s.seniorN.v}" min="1" max="5" onchange="setNum('seniorN',this.value)"><span class="rule-unit">:</span><input type="number" class="rule-input" style="width:44px" value="${s.seniorD.v}" min="1" max="10" onchange="setNum('seniorD',this.value)"></div><div>${tog('seniorN',s.seniorN.on)}</div></div>`;
+}
+function ruleRowToggle(k,name,desc,icon,type){
+  const s=ruleState[activeRuleDept][k];
+  return`<div class="rule-row"><div class="rule-icon"><i class="ti ${icon}"></i></div><div class="rule-info"><div class="rn">${name} <span class="badge badge-${type}">${type}</span></div><div class="rd">${desc}</div></div><div></div><div>${tog(k,s.on)}</div></div>`;
+}
+
+// ═══════════════════════════════════════════
+// ROSTER BUILDER
+// ═══════════════════════════════════════════
+function getDays(m){return m===7||m===8?31:30;}
+function isWeekend(day,m){const d=new Date(2025,m-1,day);return d.getDay()===0||d.getDay()===6;}
+
+function onRosterWardChange(){ renderRosterRuleChips(); }
+function renderRosterRuleChips(){
+  const w=document.getElementById('roster-ward').value;
+  const r=WARD_RULES[w];
+  document.getElementById('roster-rule-chips').innerHTML=`
+    <span class="ctrl-chip badge-hard">Min PK III: ${r.minPKIII}/shift</span>
+    <span class="ctrl-chip badge-hard">Rest: ${r.minRest}h</span>
+    <span class="ctrl-chip badge-hard">Max nights: ${r.maxNights}</span>
+    <span class="ctrl-chip badge-soft">Cross-ward: ${r.crossWard?'on':'off'}</span>`;
+}
+
+function buildRosterPrompt(ward,month,nurses,rules){
+  const mName=MONTH_NAMES[month]; const days=getDays(month);
+  return`You are a nurse scheduling AI. Generate a ${days}-day shift roster for ${WARD_LABELS[ward]} ward, ${mName} 2025.
+
+NURSES:
+${nurses.map(n=>`- ${n.name} (${n.id}): ${n.pk}, comps: ${n.comps.join(', ')}, pref: ${n.pref}${n.status==='leave'?', ON LEAVE full month':''}${n.avail==='part-time'?', PART-TIME max 3 days/week':''}`).join('\n')}
+
+HARD RULES: Min ${rules.minPKIII} PK III+/shift | Min ${rules.minRest}h rest between shifts | Max ${rules.maxNights} consecutive nights | Max ${rules.maxWeekly}h/week | ON LEAVE nurses get L all days | Part-time max 3 days/week
+
+SOFT RULES: Honour shift preferences | Distribute nights/weekends/holidays fairly | Minimise overtime
+
+SHIFTS: M=Morning, A=Afternoon, N=Night, O=Off, L=Leave
+
+Respond ONLY with JSON, no markdown:
+{"roster":{"NURSE_ID":["${Array(days).fill('M').join('","')}"]},"summary":"2-sentence summary","compliance":[{"type":"ok|warn|info","title":"title","detail":"one sentence"}],"reasoning":[{"type":"ok|warn|info","text":"one point"}]}
+Each nurse needs exactly ${days} entries using only M,A,N,O,L.`;
+}
+
+async function generateRoster(){
+  const ward=document.getElementById('roster-ward').value;
+  const month=parseInt(document.getElementById('roster-month').value);
+  const nurses=WARD_NURSES[ward]||[];
+  const rules=WARD_RULES[ward];
+
+  document.getElementById('roster-empty').style.display='none';
+  document.getElementById('roster-grid').style.display='none';
+  const ld=document.getElementById('roster-loading');
+  ld.style.display='flex'; document.getElementById('approve-btn').style.display='none';
+  document.getElementById('roster-ai-body').innerHTML=`<div class="loading-row"><div class="gen-dots"><span></span><span></span><span></span></div>Generating roster…</div>`;
+
+  const steps=[['Analysing nurse profiles…','Checking competencies and availability'],['Applying hard rules…','Enforcing PK III minimums and rest gaps'],['Optimising fairness…','Balancing nights, weekends, preferences'],['Finalising…','Running compliance checks']];
+  let si=0;
+  const iv=setInterval(()=>{
+    if(si<steps.length){document.getElementById('roster-load-txt').textContent=steps[si][0];document.getElementById('roster-load-sub').textContent=steps[si][1];si++;}
+  },900);
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:buildRosterPrompt(ward,month,nurses,rules)}]})});
+    const data=await res.json();
+    clearInterval(iv); ld.style.display='none';
+    const raw=data.content.map(b=>b.text||'').join('');
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    renderRosterGrid(parsed,nurses,month,ward);
+    renderRosterAI(parsed);
+    document.getElementById('approve-btn').style.display='inline-flex';
+  }catch(e){
+    clearInterval(iv); ld.style.display='none';
+    document.getElementById('roster-empty').style.display='flex';
+    document.getElementById('roster-ai-body').innerHTML=`<div class="ai-note warn"><div class="ant">Generation failed</div><div class="anb">Could not parse AI response. Please try again.</div></div>`;
+  }
+}
+
+function renderRosterGrid(parsed,nurses,month,ward){
+  const days=getDays(month),mName=MONTH_NAMES[month];
+  let heads='';
+  for(let d=1;d<=days;d++){const wk=isWeekend(d,month);const dl=['S','M','T','W','T','F','S'][new Date(2025,month-1,d).getDay()];heads+=`<th class="${wk?'wknd':''}" title="${dl} ${d}">${d}</th>`;}
+
+  let rows=''; let totalS=0,totalL=0;
+  nurses.forEach(n=>{
+    const shifts=parsed.roster[n.id]||Array(days).fill('O');
+    let cells='';
+    shifts.forEach((s,i)=>{const wk=isWeekend(i+1,month);if(['M','A','N'].includes(s))totalS++;if(s==='L')totalL++;cells+=`<td class="${wk?'wknd-td':''}"><div class="sc sc-${s||'O'}">${s||'·'}</div></td>`;});
+    rows+=`<tr><td class="nurse-col-td"><div class="nn" title="${n.name}">${n.name}</div><div class="npk" style="color:${PK_COLOR[n.pk]||'#888'}">${n.pk}${n.status==='leave'?' · Leave':n.avail==='part-time'?' · PT':''}</div></td>${cells}</tr>`;
+  });
+
+  document.getElementById('roster-grid').innerHTML=`<table class="roster-table"><thead><tr><th class="nurse-col-h">${WARD_LABELS[ward]} · ${mName} 2025</th>${heads}</tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('roster-grid').style.display='block';
+  document.getElementById('roster-status-txt').innerHTML=`<strong>${nurses.length}</strong> nurses · <strong>${totalS}</strong> shifts · <strong>${totalL}</strong> leave days · <span style="color:var(--teal)">✓ Roster generated</span>`;
+}
+
+function renderRosterAI(parsed){
+  let html='';
+  if(parsed.summary) html+=`<div><div class="ai-sec-title">Summary</div><div class="ai-note info"><div class="anb">${parsed.summary}</div></div></div>`;
+  if(parsed.compliance?.length){html+=`<div><div class="ai-sec-title">Compliance</div>${parsed.compliance.map(c=>`<div class="ai-note ${c.type}" style="margin-bottom:6px"><div class="ant">${c.title}</div><div class="anb">${c.detail}</div></div>`).join('')}</div>`;}
+  if(parsed.reasoning?.length){html+=`<div><div class="ai-sec-title">Decisions & reasoning</div><div style="border:0.5px solid var(--border-light);border-radius:var(--radius-md);padding:6px 10px">${parsed.reasoning.map(r=>{const ic=r.type==='ok'?'ti-check':r.type==='warn'?'ti-alert-triangle':'ti-info-circle';const cl=r.type==='ok'?'r-ok':r.type==='warn'?'r-warn':'r-info';return`<div class="reason-row"><i class="ti ${ic} ${cl}"></i><span>${r.text}</span></div>`;}).join('')}</div></div>`;}
+  document.getElementById('roster-ai-body').innerHTML=html||`<div class="ai-empty-state"><i class="ti ti-brain"></i><p>No reasoning returned</p></div>`;
+}
+
+function clearRoster(){
+  document.getElementById('roster-grid').style.display='none';
+  document.getElementById('roster-grid').innerHTML='';
+  document.getElementById('roster-empty').style.display='flex';
+  document.getElementById('roster-ai-body').innerHTML=`<div class="ai-empty-state"><i class="ti ti-brain"></i><p>AI reasoning will appear here once you generate a roster</p></div>`;
+  document.getElementById('roster-status-txt').textContent='Select a ward and click Generate with AI to begin';
+  document.getElementById('approve-btn').style.display='none';
+}
+function exportRosterMsg(){alert('Export to Excel — available in v0.2 with full HR/payroll integration.');}
+renderRosterRuleChips();
+
+// ═══════════════════════════════════════════
+// DISRUPTION HANDLER
+// ═══════════════════════════════════════════
+const D_NURSES=[
+  {id:'N-001',name:'Sari Dewi',initials:'SD',av:'teal',pk:'PK III',ward:'ICU',comps:['ACLS','BLS','ICU Core'],lastShift:'Morning 14 Jul',hoursThisWeek:32,nightsThisMonth:4,status:'available'},
+  {id:'N-003',name:'Putri Maharani',initials:'PM',av:'purple',pk:'PK IV',ward:'ICU',comps:['ACLS','BLS','ICU Core','PICU'],lastShift:'Afternoon 14 Jul',hoursThisWeek:36,nightsThisMonth:3,status:'available'},
+  {id:'N-015',name:'Budi Santoso',initials:'BS',av:'blue',pk:'PK II',ward:'ICU',comps:['BLS','ICU Core'],lastShift:'Night 13 Jul',hoursThisWeek:40,nightsThisMonth:6,status:'available'},
+  {id:'N-016',name:'Citra Lestari',initials:'CL',av:'amber',pk:'PK II',ward:'ICU',comps:['BLS','ICU Core'],lastShift:'Morning 15 Jul',hoursThisWeek:38,nightsThisMonth:3,status:'just_finished'},
+  {id:'N-017',name:'Agus Pramono',initials:'AP',av:'teal',pk:'PK III',ward:'ICU',comps:['ACLS','BLS','ICU Core'],lastShift:'Afternoon 12 Jul',hoursThisWeek:28,nightsThisMonth:2,status:'available'},
+  {id:'N-011',name:'Sri Wahyuni',initials:'SW',av:'purple',pk:'PK IV',ward:'ED',comps:['ACLS','BLS','BTLS','Triage'],lastShift:'Afternoon 13 Jul',hoursThisWeek:30,nightsThisMonth:3,status:'cross_ward'},
+];
+
+function buildDisruptionPrompt(shiftLabel){
+  return`You are a hospital nurse scheduling AI. A nurse has called in sick.
+
+ABSENT: Ratna Sari (N-012) — PK III, ICU, ACLS certified
+SHIFT: ${shiftLabel}, ICU, 15 Jul 2025 — Sick leave
+
+HARD RULES: ICU Core competency required | ACLS required | Min 10h rest since last shift before night at 23:00 | Min 2 PK III+ per shift | Max 42h/week | Cross-ward only if ICU competency held
+
+AVAILABLE NURSES:
+${D_NURSES.map(n=>`- ${n.name} (${n.id}): ${n.pk}, ward: ${n.ward}, comps: ${n.comps.join(', ')}, last shift: ${n.lastShift}, hours/week: ${n.hoursThisWeek}, nights/month: ${n.nightsThisMonth}, status: ${n.status}`).join('\n')}
+
+Rank candidates, eliminate hard-rule violations, explain all reasoning.
+
+Respond ONLY with JSON, no markdown:
+{"candidates":[{"nurseId":"N-XXX","rank":1,"score":92,"overtimeRisk":"none|low|medium|high","eligible":true,"reasons":[{"type":"ok|warn|info","text":"reason"}],"recommendation":"one sentence"}],"eliminatedNurses":[{"nurseId":"N-XXX","reason":"why"}],"overallNote":"one sentence summary"}`;
+}
+
+async function findReplacements(){
+  const shiftLabel={N:'Night',M:'Morning',A:'Afternoon'}[document.getElementById('d-shift').value]||'Night';
+  document.getElementById('d-empty').style.display='none';
+  document.getElementById('d-candidates').innerHTML=`<div class="loading-row"><div class="gen-dots"><span></span><span></span><span></span></div> AI evaluating all nurses against ICU rules…</div>`;
+  document.getElementById('d-results-hd').textContent='Finding replacements…';
+  document.getElementById('d-results-count').textContent='';
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:buildDisruptionPrompt(shiftLabel)}]})});
+    const data=await res.json();
+    const raw=data.content.map(b=>b.text||'').join('');
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    renderCandidates(parsed);
+  }catch(e){
+    document.getElementById('d-candidates').innerHTML=`<div class="ai-note warn" style="margin-top:8px"><div class="ant">Generation failed</div><div class="anb">Could not get AI response. Please try again.</div></div>`;
+    document.getElementById('d-results-hd').textContent='AI replacement candidates';
+  }
+}
+
+function renderCandidates(parsed){
+  const nm={};D_NURSES.forEach(n=>{nm[n.id]=n;});
+  let html='';
+  if(parsed.overallNote) html+=`<div class="info-note" style="margin-bottom:12px"><i class="ti ti-info-circle" style="font-size:14px;flex-shrink:0;margin-top:1px"></i><span>${parsed.overallNote}</span></div>`;
+
+  const elig=(parsed.candidates||[]).filter(c=>c.eligible);
+  const elim=parsed.eliminatedNurses||[];
+
+  if(elig.length) html+=`<div class="section-lbl">${elig.length} eligible · ranked by AI</div>`;
+
+  elig.forEach(c=>{
+    const n=nm[c.nurseId];if(!n)return;
+    const isTop=c.rank===1;
+    const otColor={none:'color:#1D9E75',low:'color:#1D9E75',medium:'color:var(--amber)',high:'color:var(--red)'}[c.overtimeRisk]||'';
+    const otLbl={none:'No OT risk',low:'Low OT risk',medium:'OT caution',high:'High OT risk'}[c.overtimeRisk]||'';
+    html+=`<div class="candidate-card${isTop?' top':''}">
+      ${isTop?`<div style="font-size:10px;background:var(--teal);color:#fff;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px"><i class="ti ti-star" style="font-size:11px"></i>Top recommendation</div>`:''}
+      <div class="cand-top">
+        <div class="avatar av-${n.av}" style="width:32px;height:32px;font-size:12px">${n.initials}</div>
+        <div class="cand-info"><div class="cand-name">${n.name}</div><div class="cand-meta">${n.id} · ${n.pk} · ${n.ward}${n.status==='cross_ward'?' · Cross-ward':''}</div></div>
+        <div class="cand-rank">#${c.rank}</div>
+      </div>
+      <div class="score-bar">
+        <span style="font-size:10px;color:var(--text-tertiary);min-width:36px">Score</span>
+        <div class="score-track"><div class="score-fill${c.score<75?' mid':''}" style="width:${Math.round(c.score)}%"></div></div>
+        <span class="score-val">${Math.round(c.score)}</span>
+        <span class="ot-badge" style="${otColor}">${otLbl}</span>
+      </div>
+      <div style="border:0.5px solid var(--border-light);border-radius:var(--radius-md);padding:6px 8px;margin-bottom:8px">
+        ${(c.reasons||[]).map(r=>{const ic=r.type==='ok'?'ti-check':r.type==='warn'?'ti-alert-triangle':'ti-info-circle';const cl=r.type==='ok'?'r-ok':r.type==='warn'?'r-warn':'r-info';return`<div class="reason-row"><i class="ti ${ic} ${cl}"></i><span>${r.text}</span></div>`;}).join('')}
+      </div>
+      ${c.recommendation?`<div style="font-size:11px;color:var(--text-secondary);font-style:italic;margin-bottom:10px;padding-top:6px;border-top:0.5px solid var(--border-light)">${c.recommendation}</div>`:''}
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-primary" style="flex:1;justify-content:center;font-size:11px" onclick="confirmReplacement('${n.name}')"><i class="ti ti-check"></i>Confirm replacement</button>
+        <button class="btn btn-sm" onclick="alert('Notification sent to ${n.name} via SMS and push.')"><i class="ti ti-bell"></i>Notify</button>
+      </div>
+    </div>`;
+  });
+
+  if(elim.length){
+    html+=`<div class="section-lbl" style="margin-top:12px">Eliminated — rule violations</div>`;
+    elim.forEach(e=>{const n=nm[e.nurseId];if(!n)return;html+=`<div class="elim-card"><div class="avatar av-${n.av}" style="width:26px;height:26px;font-size:10px">${n.initials}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">${n.name} <span style="font-size:10px;color:var(--text-tertiary)">· ${n.pk}</span></div><div style="font-size:11px;color:var(--red-dark);display:flex;align-items:center;gap:4px"><i class="ti ti-x" style="font-size:12px"></i>${e.reason}</div></div></div>`;});
+  }
+
+  document.getElementById('d-candidates').innerHTML=html;
+  document.getElementById('d-results-hd').textContent='AI replacement candidates';
+  document.getElementById('d-results-count').textContent=`${elig.length} eligible · ${elim.length} eliminated`;
+}
+
+function confirmReplacement(name){
+  document.getElementById('d-candidates').innerHTML=`
+    <div class="resolved-banner"><i class="ti ti-circle-check" style="font-size:18px;flex-shrink:0"></i><strong>${name}</strong> confirmed as replacement. Roster updated. HR notified.</div>
+    <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;margin-bottom:14px">Disruption resolved. The updated shift has been saved to the July roster and the absence logged for payroll.</div>
+    <button class="btn btn-ai" style="width:100%;justify-content:center" onclick="resetDisruption()"><i class="ti ti-refresh"></i>Handle another disruption</button>`;
+  document.getElementById('d-results-hd').textContent='Disruption resolved';
+  document.getElementById('d-results-count').textContent='';
+}
+
+function resetDisruption(){
+  document.getElementById('d-empty').style.display='flex';
+  document.getElementById('d-candidates').innerHTML='';
+  document.getElementById('d-results-hd').textContent='AI replacement candidates';
+  document.getElementById('d-results-count').textContent='';
+}
+</script>
+</div><!-- /app-wrapper -->
+</body>
+</html>
